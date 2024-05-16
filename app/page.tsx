@@ -3,6 +3,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import AuthButtonServer from "./components/auth-button-server";
 import DomainsList from "./components/domains-list";
+import ServiceAccountButton from './components/service-account-button';
+import VerifyButton from "./components/verify-button";
 
 
 export default async function Home() {
@@ -21,6 +23,8 @@ export default async function Home() {
     <>
       <h1>Logged in!</h1>
       <DomainsList />
+      <ServiceAccountButton />
+      <VerifyButton />
       <AuthButtonServer />
     </>
   );

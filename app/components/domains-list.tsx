@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react';
 import { getDomainList } from "@/lib/actions";
 import { addDomainsToDB } from "@/lib/actions";
-import ServiceAccountButton from './service-account-button';
-
+ 
 type Domain = { 
     siteUrl: string 
 };
@@ -49,7 +48,6 @@ function DomainsList() {
                     domains.map((domain: { siteUrl: string }) => (
                         <li key={domain.siteUrl}>
                             {domain.siteUrl.replace('sc-domain:', '')}
-                            <ServiceAccountButton domain={domain.siteUrl.replace('sc-domain:', '')} />
                         </li>
                     ))
                 ) : (

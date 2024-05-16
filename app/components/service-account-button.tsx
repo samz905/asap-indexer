@@ -1,13 +1,15 @@
-import { useState } from 'react';
-import { createServiceAccountForDomain } from "@/lib/actions";
+'use client';
 
-function ServiceAccountButton({ domain }: { domain: string }) {
+import { useState } from 'react';
+import { createServiceAccount } from "@/lib/actions";
+
+function ServiceAccountButton() {
     const [loading, setLoading] = useState(false);
 
     const handleCreateServiceAccount = async () => {
         setLoading(true);
         try {
-            await createServiceAccountForDomain(domain);
+            await createServiceAccount();
             console.log('Service account created successfully!');
         } catch (error) {
             console.error('Failed to create service account:', error);
