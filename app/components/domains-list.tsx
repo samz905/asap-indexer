@@ -1,9 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getDomainList } from "@/lib/actions";
-import { addDomainsToDB } from "@/lib/actions";
- 
+import { 
+    getDomainList, 
+    addDomainsToDB, 
+    deleteDomainsFromDB 
+} from "@/lib/actions";
+
 type Domain = { 
     siteUrl: string 
 };
@@ -18,6 +21,7 @@ function DomainsList() {
             const domainsData = await getDomainList();
             const cleanedDomains = domainsData.map((domain: Domain) => domain.siteUrl.replace('sc-domain:', ''));
             await addDomainsToDB(cleanedDomains);
+            await deleteDomainsFromDB(cleanedDomains);
             setDomains(domainsData);
         } catch (error) {
             console.error("Failed to fetch domains:", error);

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { createServiceAccount } from "@/lib/actions";
+import { createServiceAccount, addServiceAccount } from "@/lib/actions";
 
 function ServiceAccountButton() {
     const [loading, setLoading] = useState(false);
@@ -9,7 +9,8 @@ function ServiceAccountButton() {
     const handleCreateServiceAccount = async () => {
         setLoading(true);
         try {
-            await createServiceAccount();
+            const service_email = await createServiceAccount();
+            await addServiceAccount(service_email);
             console.log('Service account created successfully!');
         } catch (error) {
             console.error('Failed to create service account:', error);

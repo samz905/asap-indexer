@@ -115,6 +115,55 @@ async function addDomainsToDB(domains: string[]) {
     }
 }
 
+async function deleteDomainsFromDB(domainNames: string[]) {
+    const supabase = createServerComponentClient({ cookies });
+
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+        const { data: dbDomains, error: fetchError } = await supabase
+            .from('domains')
+            .select('domain_name')
+            .eq('user_id', user.id);
+
+        if (fetchError) {
+            console.error('Error fetching domains from DB:', fetchError);
+            throw new Error('Failed to fetch domains from the database');
+        }
+
+        const dbDomainNames = dbDomains.map(dbDomain => dbDomain.domain_name);
+
+        const domainsToDelete = dbDomainNames.filter(dbDomainName => !domainNames.includes(dbDomainName));
+
+        for (const domainName of domainsToDelete) {
+            const { error: deleteError } = await supabase
+                .from('domains')
+                .delete()
+                .match({ user_id: user.id, domain_name: domainName });
+
+            if (deleteError) {
+                console.error('Error deleting domain:', deleteError);
+                continue; // Skip to the next domain if there's an error deleting
+            }
+        }
+    } else {
+        throw new Error('User not authenticated');
+    }
+}
+
+async function getDomainFromId(id: string) {
+    const supabase = createServerComponentClient({ cookies });
+
+    const { data: domains } = await supabase
+        .from('domains')
+        .select('domain_name')
+        .match({ id: id });
+
+    return domains;
+}
+
 async function createServiceAccount() {
     const accessToken = await getAccessToken();
     const accountId = `sa-${Math.random().toString(36).substring(2, 15)}`;
@@ -146,11 +195,27 @@ async function createServiceAccount() {
     }
 }
 
-async function createJSONPrivateKey(serviceAccountEmail: string) {
+async function createJSONPrivateKey() {
+    const supabase = createServerComponentClient({ cookies });
+
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+        throw new Error('User not authenticated');
+    }
+
+    const { data: serviceAccountEmail } = await supabase
+        .from('profiles')
+        .select('service_account_email')
+        .match({ id: user.id })
+        .single();
+
     const accessToken = await getAccessToken();
 
     try {
-        const response = await fetch(`https://iam.googleapis.com/v1/projects/${process.env.GOOGLE_PROJECT_ID}/serviceAccounts/${serviceAccountEmail}/keys`, {
+        const response = await fetch(`https://iam.googleapis.com/v1/projects/${process.env.GOOGLE_PROJECT_ID}/serviceAccounts/${serviceAccountEmail?.service_account_email}/keys`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
@@ -177,8 +242,37 @@ async function createJSONPrivateKey(serviceAccountEmail: string) {
     }
 }
 
-async function verifyServiceAccount(domainName: string) {
+async function addPrivateKeytoDB() {
+    const privateKey = await createJSONPrivateKey();
+    const supabase = createServerComponentClient({ cookies });
+
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+        await supabase.from('profiles').update({ private_key: privateKey }).match({ id: user.id });
+    }
+}
+
+async function checkIfPrivateKeyExists() {
+    const supabase = createServerComponentClient({ cookies });
+
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+
+    const { data: private_key_data } = await supabase
+        .from('profiles')
+        .select('private_key')
+        .match({ id: user?.id })
+        .single();
     
+    const check = private_key_data && private_key_data?.private_key !== null;
+    return check;
+}
+
+async function verifyServiceAccount(domainName: string) {
 }
 
 async function addServiceAccount(serviceAccountEmail: string) {
@@ -210,7 +304,6 @@ async function getAccessTokenFromPrivateKey() {
         .select("service_account_email")
         .match({ id: user?.id }).single();
 
-    
     const { data: private_key } = await supabase
         .from("profiles")
         .select("private_key")
@@ -435,9 +528,8 @@ async function getSitemapsList(siteUrl: string) {
  * @returns An array containing the list of sitemaps and an array of unique page URLs extracted from those sitemaps.
  */
 export async function getSitemapPages(siteUrl: string) {
-    const accessToken = await getAccessTokenFromPrivateKey();
-
     const sitemaps = await getSitemapsList(siteUrl);
+    console.log("Sitemaps:", sitemaps);
   
     let pages: string[] = [];
     for (const url of sitemaps) {
@@ -457,10 +549,13 @@ export {
     insertCode, 
     getDomainList, 
     addDomainsToDB, 
+    deleteDomainsFromDB,
+    getDomainFromId,
     createServiceAccount, 
     addServiceAccount, 
     verifyServiceAccount,
-    createJSONPrivateKey,
+    addPrivateKeytoDB,
+    checkIfPrivateKeyExists,
     getAccessTokenFromPrivateKey
 };
 
