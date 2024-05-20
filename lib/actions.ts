@@ -36,7 +36,7 @@ async function insertCode(refresh_token: string) {
     }
 }
 
-async function getAccessToken() {
+async function getAccessToken(admin: boolean = false) {
     const supabase = createServerComponentClient({ cookies });
     const {
         data: { user },
@@ -46,16 +46,18 @@ async function getAccessToken() {
         throw new Error("User not authenticated");
     }
 
-    const { 
+    let { 
         data: refresh_token 
     } = await supabase.from("profiles").select("refresh_token").match({ id: user.id }).single();
 
-       const access_token_response = await fetch('https://oauth2.googleapis.com/token', {
+    admin ? refresh_token = process.env.GOOGLE_REFRESH_TOKEN : refresh_token = refresh_token.refresh_token;
+
+    const access_token_response = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: `client_id=${process.env.GOOGLE_CLIENT_ID}&client_secret=${process.env.GOOGLE_CLIENT_SECRET}&refresh_token=${refresh_token?.refresh_token}&grant_type=refresh_token`
+        body: `client_id=${process.env.GOOGLE_CLIENT_ID}&client_secret=${process.env.GOOGLE_CLIENT_SECRET}&refresh_token=${refresh_token}&grant_type=refresh_token`
     });
 
     const data = await access_token_response.json();
@@ -165,7 +167,7 @@ async function getDomainFromId(id: string) {
 }
 
 async function createServiceAccount() {
-    const accessToken = await getAccessToken();
+    const accessToken = await getAccessToken(true);
     const accountId = `sa-${Math.random().toString(36).substring(2, 15)}`;
 
     try {
@@ -212,7 +214,7 @@ async function createJSONPrivateKey() {
         .match({ id: user.id })
         .single();
 
-    const accessToken = await getAccessToken();
+    const accessToken = await getAccessToken(true);
 
     try {
         const response = await fetch(`https://iam.googleapis.com/v1/projects/${process.env.GOOGLE_PROJECT_ID}/serviceAccounts/${serviceAccountEmail?.service_account_email}/keys`, {
@@ -299,35 +301,53 @@ async function getAccessTokenFromPrivateKey() {
         data: { user },
     } = await supabase.auth.getUser();
 
-    const { data: client_email } = await supabase
-        .from("profiles")
-        .select("service_account_email")
-        .match({ id: user?.id }).single();
-
-    const { data: private_key } = await supabase
-        .from("profiles")
-        .select("private_key")
-        .match({ id: user?.id }).single();
-
-    if (!client_email || !private_key) {
-        console.error("❌ Missing client_email or private_key in service account credentials.");
+    if (!user) {
+        console.error("❌ No user found.");
+        return null;
     }
 
-    const jwtClient = new google.auth.JWT(
-        String(client_email),
-        undefined,
-        String(private_key),
-        ["https://www.googleapis.com/auth/webmasters.readonly", "https://www.googleapis.com/auth/indexing"],
-        undefined
-    );
+    const { data: profileData, error } = await supabase
+        .from("profiles")
+        .select("service_account_email, private_key")
+        .match({ id: user.id })
+        .single();
 
-    const tokens = await jwtClient.authorize();
-    return tokens.access_token;
+    if (error || !profileData) {
+        console.error("❌ Failed to retrieve service account credentials:", error?.message);
+        return null;
+    }
+
+    const { service_account_email, private_key } = profileData;
+
+    if (!service_account_email || !private_key) {
+        console.error("❌ Missing client_email or private_key in service account credentials.");
+        return null;
+    }
+
+    // Decode the base64-encoded private key data
+    const decodedKey = JSON.parse(Buffer.from(private_key, 'base64').toString('utf8')).private_key;
+
+    try {
+        const jwtClient = new google.auth.JWT(
+            service_account_email,
+            null,
+            decodedKey.replace(/\\n/g, '\n'),
+            ["https://www.googleapis.com/auth/webmasters.readonly", "https://www.googleapis.com/auth/indexing"]
+        );
+
+        const tokens = await jwtClient.authorize();
+        return tokens.access_token;
+    } catch (error) {
+        console.error("❌ Error authorizing JWT client:", error);
+        return null;
+    }
 }
 
 
 export async function checkSiteUrl(siteUrl: string) {
-    const sites = await getDomainList();
+    let sites = await getDomainList();
+    console.log("Sites", sites);
+    sites = sites.map(site => site.siteUrl);
     let formattedUrls: string[] = [];
   
     // Convert the site URL into all possible formats
@@ -350,7 +370,7 @@ export async function checkSiteUrl(siteUrl: string) {
     // Check if any of the formatted URLs are accessible
     for (const formattedUrl of formattedUrls) {
         if (sites.includes(formattedUrl)) {
-        return formattedUrl;
+            return formattedUrl;
         }
     }
 
@@ -489,6 +509,7 @@ export async function requestIndexing(url: string) {
  */
 async function getSitemapsList(siteUrl: string) {
     const accessToken = await getAccessTokenFromPrivateKey();
+    // const accessToken = await getAccessToken(true);
 
     const url = `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}/sitemaps`;
   
@@ -529,7 +550,6 @@ async function getSitemapsList(siteUrl: string) {
  */
 export async function getSitemapPages(siteUrl: string) {
     const sitemaps = await getSitemapsList(siteUrl);
-    console.log("Sitemaps:", sitemaps);
   
     let pages: string[] = [];
     for (const url of sitemaps) {
