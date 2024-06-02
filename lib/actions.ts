@@ -12,7 +12,7 @@ import { fetchRetry } from "./utils";
 import { webmasters_v3 } from "googleapis";
 import Sitemapper from "sitemapper";
 
-export const dynamic = 'force-dynamic';
+// export const dynamic = 'force-dynamic';
 
 async function insertCode(refresh_token: string) {
     const supabase = createServerActionClient({ cookies });
