@@ -178,6 +178,8 @@ async function getDomainFromId(id: string) {
 
 async function createServiceAccount() {
     const accessToken = await getAccessToken(true);
+
+    console.log("Admin access token: ", accessToken);
     const accountId = `sa-${Math.random().toString(36).substring(2, 15)}`;
 
     try {
