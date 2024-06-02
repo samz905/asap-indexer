@@ -28,7 +28,7 @@ export default function AuthButtonClient({
                   access_type: 'offline',
                   prompt: 'consent'
                 },
-                redirectTo: `${location.origin}/auth/callback`,
+                redirectTo: `https://asap-indexer.vercel.app/auth/callback`,
                 scopes: "https://www.googleapis.com/auth/webmasters https://www.googleapis.com/auth/indexing https://www.googleapis.com/auth/cloud-platform"
             },
         });
