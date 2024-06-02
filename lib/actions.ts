@@ -203,7 +203,7 @@ async function createServiceAccount() {
 
         const { email } = await response.json();
 
-        console.log(`Service account created!`);
+        console.log(`Service account created: ${email}`);
         return email;
     } catch (error) {
         console.error('Error creating service account:', error);
