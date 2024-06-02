@@ -57,6 +57,8 @@ async function getAccessToken(admin: boolean = false) {
 
     const effective_refresh_token = admin ? process.env.GOOGLE_REFRESH_TOKEN : refresh_token.refresh_token;
 
+    console.log("Effective refresh token: ", effective_refresh_token);
+
     const access_token_response = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
         headers: {
