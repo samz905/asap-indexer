@@ -62,7 +62,7 @@ async function getAccessToken(admin: boolean = false) {
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: `client_id=${process.env.GOOGLE_CLIENT_ID}&client_secret=${process.env.GOOGLE_CLIENT_SECRET}&refresh_token=${refresh_token}&grant_type=refresh_token`
+        body: `client_id=${process.env.GOOGLE_CLIENT_ID}&client_secret=${process.env.GOOGLE_CLIENT_SECRET}&refresh_token=${effective_refresh_token}&grant_type=refresh_token`
     });
 
     console.log("Access token response: ", access_token_response);
