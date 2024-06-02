@@ -7,6 +7,7 @@ import ServiceAccountButton from './components/service-account-button';
 import VerifyButton from "./components/verify-button";
 import CreatePrivateKey from "./components/create-private-key";
 
+export const dynamic = 'force-dynamic';
 
 export default async function Home() {
   const supabase = createServerComponentClient({ cookies });

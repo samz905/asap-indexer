@@ -3,6 +3,8 @@ import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 import { insertCode } from "../../../lib/actions";
 
+export const dynamic = 'force-dynamic';
+
 // This is the callback route where the app is redirected after auth
 // It exchanges the code received after successful auth for a session
 export async function GET(request: NextRequest) {
