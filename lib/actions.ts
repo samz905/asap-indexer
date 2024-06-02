@@ -48,9 +48,13 @@ async function getAccessToken(admin: boolean = false) {
 
     let { 
         data: refresh_token 
-    } = await supabase.from("profiles").select("refresh_token").match({ id: user.id }).single();
+    } = await supabase.from("profiles").select("refresh_token").match({ id: user.id }).single() || { data: { refresh_token: null } };
 
-    admin ? refresh_token = process.env.GOOGLE_REFRESH_TOKEN : refresh_token = refresh_token.refresh_token;
+    if (!refresh_token || !refresh_token.refresh_token) {
+        throw new Error("Refresh token not found");
+    }
+
+    const effective_refresh_token = admin ? process.env.GOOGLE_REFRESH_TOKEN : refresh_token.refresh_token;
 
     const access_token_response = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
@@ -60,12 +64,16 @@ async function getAccessToken(admin: boolean = false) {
         body: `client_id=${process.env.GOOGLE_CLIENT_ID}&client_secret=${process.env.GOOGLE_CLIENT_SECRET}&refresh_token=${refresh_token}&grant_type=refresh_token`
     });
 
+    console.log("Access token response: ", access_token_response);
+
     const data = await access_token_response.json();
+    console.log("Data: ", data)
     return data.access_token;
 }
 
 async function getDomainList() {
     const access_token = await getAccessToken();
+    console.log("Domain Access token: ", access_token);
 
     const response = await fetch('https://www.googleapis.com/webmasters/v3/sites', {
         headers: {
@@ -74,6 +82,7 @@ async function getDomainList() {
     });
 
     const domains_data = await response.json();
+    console.log("Domains data: ", domains_data);
 
     if (domains_data.siteEntry) {
         return domains_data.siteEntry.map((entry: { siteUrl: string }) => ({
@@ -330,11 +339,10 @@ async function getAccessTokenFromPrivateKey() {
     try {
         const jwtClient = new google.auth.JWT(
             service_account_email,
-            null,
+            undefined,
             decodedKey.replace(/\\n/g, '\n'),
             ["https://www.googleapis.com/auth/webmasters.readonly", "https://www.googleapis.com/auth/indexing"]
         );
-
         const tokens = await jwtClient.authorize();
         return tokens.access_token;
     } catch (error) {
@@ -347,7 +355,7 @@ async function getAccessTokenFromPrivateKey() {
 export async function checkSiteUrl(siteUrl: string) {
     let sites = await getDomainList();
     console.log("Sites", sites);
-    sites = sites.map(site => site.siteUrl);
+    sites = sites.map((site: { siteUrl: string }) => site.siteUrl);
     let formattedUrls: string[] = [];
   
     // Convert the site URL into all possible formats

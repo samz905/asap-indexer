@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { 
     checkSiteUrl, 
     getSitemapPages, 
+    getPageIndexingStatus
 } from '../../../lib/actions';
 import { convertToSiteUrl } from '../../../lib/utils';
 import { getDomainFromId } from '@/lib/actions';
@@ -16,6 +17,7 @@ const Page = ({ params }: { params: { id: string } }) => {
     const [sitemaps, setSitemaps] = useState<string[]>([]);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(true);
+    const [pageStatuses, setPageStatuses] = useState<Record<string, string>>({});
 
     useEffect(() => {
         const fetchPages = async () => {
@@ -26,8 +28,17 @@ const Page = ({ params }: { params: { id: string } }) => {
                 setDomains(siteUrl);
                 siteUrl = await checkSiteUrl(siteUrl) || '';
                 if (siteUrl) {
-                    const [, uniquePages] = await getSitemapPages(siteUrl);
+                    const [sitemaps, uniquePages] = await getSitemapPages(siteUrl);
+                    if (sitemaps.length === 0) {
+                        console.error("❌ No sitemaps found, add them to Google Search Console and try again.");
+                    }
                     setPages(uniquePages);
+                    const statuses = await Promise.all(uniquePages.map(page => getPageIndexingStatus(siteUrl, page)));
+                    const statusMap = uniquePages.reduce((acc: Record<string, string>, page: string, index: number) => {
+                        acc[page] = statuses[index];
+                        return acc;
+                    }, {});
+                    setPageStatuses(statusMap);
                 }
             } catch (err) {
                 console.error(err);
@@ -48,7 +59,7 @@ const Page = ({ params }: { params: { id: string } }) => {
             ) : (
                 <ul>
                     {pages.map((page, index) => (
-                        <li key={index}>{page}</li>
+                        <li key={index}>{page} - Status: {pageStatuses[page]}</li>
                     ))}
                 </ul>
             )}

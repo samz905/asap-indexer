@@ -28,7 +28,7 @@ export default function AuthButtonClient({
                   access_type: 'offline',
                   prompt: 'consent'
                 },
-                redirectTo: "http://localhost:3000/auth/callback",
+                redirectTo: `${location.origin}/auth/callback`,
                 scopes: "https://www.googleapis.com/auth/webmasters https://www.googleapis.com/auth/indexing https://www.googleapis.com/auth/cloud-platform"
             },
         });
