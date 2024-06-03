@@ -8,6 +8,7 @@ import {
 } from '../../../lib/actions';
 import { convertToSiteUrl } from '../../../lib/utils';
 import { getDomainFromId } from '@/lib/actions';
+import IndexButton from '@/app/components/index-button'; // Import the IndexButton component
 
 const Page = ({ params }: { params: { id: string } }) => {
     const { id } = params;
@@ -59,7 +60,10 @@ const Page = ({ params }: { params: { id: string } }) => {
             ) : (
                 <ul>
                     {pages.map((page, index) => (
-                        <li key={index}>{page} - Status: {pageStatuses[page]}</li>
+                        <li key={index}>
+                            {page} - Status: {pageStatuses[page]}
+                            <IndexButton pageUrl={page} /> {/* Add the IndexButton next to each page with the corrected props */}
+                        </li>
                     ))}
                 </ul>
             )}
