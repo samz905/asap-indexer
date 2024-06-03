@@ -512,6 +512,8 @@ export async function requestIndexing(url: string) {
         console.error(await response.text());
       }
     }
+
+    console.log("Request indexing response: ", response);
 }
 
 /**
