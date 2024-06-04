@@ -59,12 +59,16 @@ async function getAccessToken(admin: boolean = false) {
 
     console.log("Effective refresh token: ", effective_refresh_token);
 
+    const requestBody = `client_id=${process.env.GOOGLE_CLIENT_ID}&client_secret=${process.env.GOOGLE_CLIENT_SECRET}&refresh_token=${effective_refresh_token}&grant_type=refresh_token`;
+
+    console.log("Request body for access token: ", requestBody);
+
     const access_token_response = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: `client_id=${process.env.GOOGLE_CLIENT_ID}&client_secret=${process.env.GOOGLE_CLIENT_SECRET}&refresh_token=${effective_refresh_token}&grant_type=refresh_token`
+        body: requestBody
     });
 
     console.log("Access token response: ", access_token_response);
